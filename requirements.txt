@@ -1,6 +1,4 @@
 telebot
 requests
-pandas
-matplotlib
 schedule
 gunicorn
