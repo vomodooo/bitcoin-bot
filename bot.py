@@ -4,16 +4,16 @@ import time
 from io import BytesIO
 from datetime import datetime
 import matplotlib.pyplot as plt
-from telegram import Bot, Update
-from telegram.ext import Updater, CommandHandler, CallbackContext, Dispatcher
+from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import CommandHandler, CallbackQueryHandler, CallbackContext, Updater, Dispatcher
 from flask import Flask, request
 
-# Bot Token
+# Thông tin Bot
 BOT_TOKEN = '8058083423:AAEdB8bsCgLw1JeSeklG-4sqSmxO45bKRsM'
-WEBHOOK_URL = "https://bitcoin-bot.onrender.com"
+WEBHOOK_URL = "https://<your-app-name>.onrender.com"
 CHAT_ID = '5166662146'
 
-# Flask App
+# Flask app và bot setup
 app = Flask(__name__)
 bot = Bot(BOT_TOKEN)
 dispatcher = Dispatcher(bot, None, workers=4)
@@ -30,7 +30,7 @@ def create_session_with_retries():
 
 session = create_session_with_retries()
 
-# Lấy giá BTC từ API CoinGecko
+# Lấy giá coin từ API CoinGecko
 def get_coin_price(coin_id="bitcoin"):
     url = f"https://api.coingecko.com/api/v3/simple/price?ids={coin_id}&vs_currencies=usd"
     try:
@@ -68,13 +68,41 @@ def generate_btc_chart():
     plt.close()
     return buf
 
-def btc_chart(update: Update, context: CallbackContext):
-    chart = generate_btc_chart()
-    if chart:
-        update.message.reply_photo(photo=chart, caption="Biểu đồ giá Bitcoin")
-    else:
-        update.message.reply_text("Không đủ dữ liệu để vẽ biểu đồ.")
+# Xử lý nút bấm
+def button_handler(update: Update, context: CallbackContext):
+    query = update.callback_query
+    query.answer()
+    data = query.data
 
+    if data == "update_btc":
+        price = get_coin_price("bitcoin")
+        if price:
+            query.edit_message_text(text=f"Giá Bitcoin hiện tại: {price} USD")
+        else:
+            query.edit_message_text(text="Không thể lấy giá Bitcoin.")
+    elif data == "btc_chart":
+        chart = generate_btc_chart()
+        if chart:
+            query.message.reply_photo(photo=chart, caption="Biểu đồ giá Bitcoin")
+        else:
+            query.edit_message_text(text="Không đủ dữ liệu để vẽ biểu đồ.")
+    elif data == "schedule_btc":
+        query.edit_message_text(text="Vui lòng sử dụng lệnh /datlich_btc [giờ phút] để đặt lịch.")
+    elif data == "other_coin":
+        query.edit_message_text(text="Vui lòng sử dụng lệnh /coin_khac [ký hiệu coin].")
+
+# Lệnh start
+def start(update: Update, context: CallbackContext):
+    keyboard = [
+        [InlineKeyboardButton("Cập nhật giá BTC", callback_data="update_btc")],
+        [InlineKeyboardButton("Biểu đồ giá BTC", callback_data="btc_chart")],
+        [InlineKeyboardButton("Đặt lịch báo", callback_data="schedule_btc")],
+        [InlineKeyboardButton("Theo dõi đồng khác", callback_data="other_coin")],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    update.message.reply_text("Chọn một tính năng:", reply_markup=reply_markup)
+
+# Đặt lịch báo giá BTC
 def dat_lich_btc(update: Update, context: CallbackContext):
     args = context.args
     if len(args) < 2:
@@ -94,6 +122,7 @@ def schedule_notifications():
                     bot.send_message(chat_id=chat_id, text=f"Giá Bitcoin hiện tại: {price} USD")
         time.sleep(60)
 
+# Tìm giá coin khác
 def coin_khac(update: Update, context: CallbackContext):
     args = context.args
     if not args:
@@ -106,19 +135,12 @@ def coin_khac(update: Update, context: CallbackContext):
     else:
         update.message.reply_text(f"Không thể lấy giá của {coin_id.upper()}.")
 
-def start(update: Update, context: CallbackContext):
-    update.message.reply_text("Bot đã sẵn sàng! Hãy sử dụng các lệnh như /btc_chart, /datlich_btc, /coin_khac.")
-
-def webhook_handler():
+@app.route(f"/{BOT_TOKEN}", methods=["POST"])
+def webhook():
     json_update = request.get_json(force=True)
     update = Update.de_json(json_update, bot)
     dispatcher.process_update(update)
     return "ok"
-
-# Đăng ký webhook và lệnh
-@app.route(f"/{BOT_TOKEN}", methods=["POST"])
-def webhook():
-    return webhook_handler()
 
 @app.route("/", methods=["GET"])
 def index():
@@ -126,15 +148,15 @@ def index():
 
 if __name__ == "__main__":
     # Đăng ký lệnh
-    dispatcher.add_handler(CommandHandler("btc_chart", btc_chart))
+    dispatcher.add_handler(CommandHandler("start", start))
     dispatcher.add_handler(CommandHandler("datlich_btc", dat_lich_btc, pass_args=True))
     dispatcher.add_handler(CommandHandler("coin_khac", coin_khac, pass_args=True))
-    dispatcher.add_handler(CommandHandler("start", start))
+    dispatcher.add_handler(CallbackQueryHandler(button_handler))
 
     # Đặt webhook
     bot.set_webhook(url=f"{WEBHOOK_URL}/{BOT_TOKEN}")
 
-    # Chạy các tác vụ nền
+    # Chạy tác vụ nền
     threading.Thread(target=hourly_btc_notification, daemon=True).start()
     threading.Thread(target=schedule_notifications, daemon=True).start()
 
