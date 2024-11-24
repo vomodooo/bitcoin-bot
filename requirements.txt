@@ -1,5 +1,2 @@
-telebot
+telegram
 requests
-schedule
-gunicorn
-flask
