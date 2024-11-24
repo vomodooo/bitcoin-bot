@@ -1,10 +1,11 @@
+import os
 import telebot
 import requests
 import pandas as pd
 import matplotlib.pyplot as plt
 import schedule
 import time
-import os
+from flask import Flask
 
 # Thông tin bot và chat
 BOT_TOKEN = '8058083423:AAEdB8bsCgLw1JeSeklG-4sqSmxO45bKRsM'
@@ -13,6 +14,9 @@ BINANCE_API_URL = 'https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT'
 
 # Khởi tạo bot
 bot = telebot.TeleBot(BOT_TOKEN)
+
+# Create a Flask app
+app = Flask(__name__)
 
 # Hàm lấy giá Bitcoin
 def get_bitcoin_price():
