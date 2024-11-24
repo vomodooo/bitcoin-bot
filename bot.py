@@ -1,79 +1,39 @@
-import requests
 import telebot
+import requests
+import pandas as pd
+import matplotlib.pyplot as plt
 import schedule
 import time
-import json
-import matplotlib.pyplot as plt
-import io
-from datetime import datetime
 
-# Thay thế bằng token và chat ID của bạn
-bot = telebot.TeleBot('8058083423:AAEdB8bsCgLw1JeSeklG-4sqSmxO45bKRsM')
-chat_id = '5166662146'
+# Thay thế các thông tin sau bằng thông tin của bạn
+BOT_TOKEN = '8058083423:AAEdB8bsCgLw1JeSeklG-4sqSmxO45bKRsM'
+CHAT_ID = 5166662146
+BINANCE_API_URL = 'https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT'
 
-# Biến toàn cục để lưu giá Bitcoin trước đó và danh sách giá để vẽ biểu đồ
-previous_price = 0
-price_history = []
+bot = telebot.TeleBot(BOT_TOKEN)
 
-def get_bitcoin_price_binance():
-    """Lấy giá Bitcoin hiện tại từ sàn Binance.
-
-    Returns:
-        float: Giá Bitcoin hiện tại theo USD.
-    """
-
-    url = 'https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT'
-    response = requests.get(url)
-    data = json.loads(response.text)
+def get_bitcoin_price():
+    response = requests.get(BINANCE_API_URL)
+    data = response.json()
     return float(data['price'])
 
 def send_price_update():
-    global previous_price, price_history
-    current_price = get_bitcoin_price_binance()
+    price = get_bitcoin_price()
+    bot.send_message(CHAT_ID, f"Giá Bitcoin hiện tại: {price:.2f} USDT")
 
-    # Định dạng giá với dấu chấm phân cách hàng nghìn
-    formatted_price = "{:,}".format(current_price)
-
-    # Kiểm tra sự thay đổi giá
-    if abs(current_price - previous_price) > 50:  # Thay đổi 50 USD
-        bot.send_message(chat_id, f"Giá Bitcoin đã thay đổi đáng kể! Giá hiện tại: ${formatted_price}")
-
-    # Cập nhật giá trước đó và lịch sử giá
-    previous_price = current_price
-    price_history.append((datetime.now(), current_price))
-
-    # Gửi thông báo cập nhật
-    bot.send_message(chat_id, f"Giá Bitcoin hiện tại trên Binance: ${formatted_price}")
-
-    # Gửi biểu đồ (mỗi 12 lần cập nhật)
-    if len(price_history) % 12 == 0:
-        plot_and_send_chart()
-
-def plot_and_send_chart():
-    """Vẽ biểu đồ giá Bitcoin và gửi qua Telegram."""
-    times, prices = zip(*price_history)
-    plt.plot(times, prices)
-    plt.xlabel("Thời gian")
-    plt.ylabel("Giá Bitcoin")
-    plt.title("Biểu đồ giá Bitcoin")
-
-    # Lưu biểu đồ vào buffer
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png')
-    buf.seek(0)
-
-    # Gửi biểu đồ
-    bot.send_photo(chat_id, photo=buf)
-    plt.clf()  # Xóa biểu đồ để chuẩn bị cho lần vẽ tiếp theo
-
-# Lên lịch gửi tin nhắn mỗi giờ (mặc định)
+# Lên lịch gửi thông báo mỗi giờ
 schedule.every().hour.do(send_price_update)
 
-# Hàm để người dùng đặt lịch cập nhật
-# ... (giữ nguyên)
+# Vẽ biểu đồ (bạn có thể tùy chỉnh thời gian và loại biểu đồ)
+def plot_price_chart(days=1):
+    # ... (Code để lấy dữ liệu lịch sử và vẽ biểu đồ)
+    bot.send_photo(CHAT_ID, photo=open('chart.png', 'rb'))
 
-# Xử lý các lệnh
-# ... (giữ nguyên)
+# Hàm chính
+def main():
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
 
-# Bắt đầu bot
-bot.polling()
+if __name__ == '__main__':
+    main()
