@@ -52,3 +52,20 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+import threading
+from flask import Flask
+
+# Giữ ứng dụng chạy để Render nhận diện
+app = Flask("")
+
+@app.route("/")
+def home():
+    return "Bot is running!"
+
+def run_flask():
+    app.run(host="0.0.0.0", port=8080)
+
+if __name__ == "__main__":
+    threading.Thread(target=run_flask).start()  # Chạy Flask song song với bot
+    main()
