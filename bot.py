@@ -10,12 +10,14 @@ def get_bitcoin_price():
     try:
         url = 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd'
         response = requests.get(url)
-        data = response.json()
+        data = response.json()   
+
 
         if 'bitcoin' in data:
             return data['bitcoin']['usd']
         else:
             print("API response structure might have changed. Data doesn't contain 'bitcoin' key.")
+            print(data)  # In ra dữ liệu để kiểm tra
             return None
     except requests.exceptions.RequestException as e:
         print(f"Error getting Bitcoin price: {e}")
