@@ -15,9 +15,6 @@ BINANCE_API_URL = 'https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT'
 # Khởi tạo bot
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# Create a Flask app
-app = Flask(__name__)
-
 # Hàm lấy giá Bitcoin
 def get_bitcoin_price():
     response = requests.get(BINANCE_API_URL)
