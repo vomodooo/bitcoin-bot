@@ -1,5 +1,5 @@
-import telegram
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+import telebot
+from telebot.ext import Updater, CommandHandler, MessageHandler, Filters
 import requests
 from time import sleep
 
