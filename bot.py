@@ -1,11 +1,12 @@
 import os
 import requests
+from flask import Flask, request
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, CallbackContext
+from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, CallbackContext, Dispatcher
 
-# Thông tin API Telegram
+# Thông tin Bot Telegram
 BOT_TOKEN = "8058083423:AAEdB8bsCgLw1JeSeklG-4sqSmxO45bKRsM"
-CHAT_ID = "5166662146"
+WEBHOOK_URL = "https://bitcoin-bot.onrender.com"  # Thay bằng tên app Render
 
 # Hàm lấy giá BTC từ Binance
 def get_btc_price():
@@ -18,7 +19,7 @@ def get_btc_price():
         return f"{price:,}".replace(",", ".")  # Định dạng giá trị
     except requests.exceptions.RequestException as e:
         print(f"Lỗi khi kết nối Binance API: {e}")
-        return "Không thể lấy giá BTC."    
+        return "Không thể lấy giá BTC."
 
 # Lệnh /gia_btc
 def gia_btc(update: Update, context: CallbackContext):
@@ -38,15 +39,21 @@ def start(update: Update, context: CallbackContext):
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.message.reply_text("Chọn một tùy chọn:", reply_markup=reply_markup)
 
-# Khởi chạy bot
-from flask import Flask, request
-
-# Thông tin về Webhook URL
-WEBHOOK_URL = "https://bitcoin-bot.onrender.com"
-
+# Khởi tạo Flask App và Webhook
 def main():
+    # Tạo Flask app
     app = Flask(__name__)
 
+    # Tạo đối tượng Updater và Dispatcher
+    updater = Updater(BOT_TOKEN, use_context=True)
+    dispatcher = updater.dispatcher
+
+    # Đăng ký các handler
+    dispatcher.add_handler(CommandHandler("start", start))
+    dispatcher.add_handler(CommandHandler("gia_btc", gia_btc))
+    dispatcher.add_handler(CallbackQueryHandler(button_handler))
+
+    # Định nghĩa route Flask
     @app.route("/", methods=["GET"])
     def index():
         return "Bot is running!", 200
@@ -57,7 +64,7 @@ def main():
         dispatcher.process_update(update)
         return "OK", 200
 
-    # Khởi tạo webhook
+    # Đặt Webhook
     updater.bot.set_webhook(f"{WEBHOOK_URL}/{BOT_TOKEN}")
     print(f"Webhook set to {WEBHOOK_URL}/{BOT_TOKEN}")
 
@@ -65,22 +72,4 @@ def main():
     app.run(host="0.0.0.0", port=8080)
 
 if __name__ == "__main__":
-    main()
-
-
-import threading
-from flask import Flask
-
-# Giữ ứng dụng chạy để Render nhận diện
-app = Flask("")
-
-@app.route("/")
-def home():
-    return "Bot is running!"
-
-def run_flask():
-    app.run(host="0.0.0.0", port=8080)
-
-if __name__ == "__main__":
-    threading.Thread(target=run_flask).start()  # Chạy Flask song song với bot
     main()
