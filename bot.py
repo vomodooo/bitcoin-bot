@@ -1,5 +1,6 @@
 import requests
 import telebot
+import time
 
 # Thay thế bằng token và chat ID của bạn
 bot = telebot.TeleBot('8058083423:AAEdB8bsCgLw1JeSeklG-4sqSmxO45bKRsM')
