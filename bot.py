@@ -31,7 +31,7 @@ def get_bitcoin_price():
 
 def send_price_update():
     price = get_bitcoin_price()
-    bot.send_message(CHAT_ID, f"Giá Bitcoin hiện tại: {price:.2f} USDT")
+    bot.send_message(CHAT_ID, f"Giá Bitcoin hiện tại: {price} USD")
 
 def plot_price_chart(days=1):
     # Lấy dữ liệu lịch sử giá Bitcoin
