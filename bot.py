@@ -11,14 +11,14 @@ CHAT_ID = "5166662146"
 def get_btc_price():
     url = "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT"
     try:
-        response = requests.get(url, timeout=10)  # Thêm timeout để tránh treo
-        response.raise_for_status()  # Gây lỗi nếu trạng thái HTTP không phải 200
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
         data = response.json()
-        price = float(data['price'])
-        return f"{price:,.2f}".replace(",", ".")  # Định dạng giá
+        price = int(float(data['price']))  # Chuyển sang số nguyên
+        return f"{price:,}".replace(",", ".")  # Định dạng giá trị
     except requests.exceptions.RequestException as e:
         print(f"Lỗi khi kết nối Binance API: {e}")
-        return "Không thể lấy giá BTC."
+        return "Không thể lấy giá BTC."    
 
 # Lệnh /gia_btc
 def gia_btc(update: Update, context: CallbackContext):
@@ -39,21 +39,34 @@ def start(update: Update, context: CallbackContext):
     update.message.reply_text("Chọn một tùy chọn:", reply_markup=reply_markup)
 
 # Khởi chạy bot
+from flask import Flask, request
+
+# Thông tin về Webhook URL
+WEBHOOK_URL = "https://bitcoin-bot.onrender.com"
+
 def main():
-    updater = Updater(BOT_TOKEN)
-    dispatcher = updater.dispatcher
+    app = Flask(__name__)
 
-    # Đăng ký các lệnh
-    dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(CommandHandler("gia_btc", gia_btc))
-    dispatcher.add_handler(CallbackQueryHandler(button_handler))
+    @app.route("/", methods=["GET"])
+    def index():
+        return "Bot is running!", 200
 
-    # Chạy bot
-    updater.start_polling()
-    updater.idle()
+    @app.route(f"/{BOT_TOKEN}", methods=["POST"])
+    def webhook():
+        update = Update.de_json(request.get_json(force=True), updater.bot)
+        dispatcher.process_update(update)
+        return "OK", 200
+
+    # Khởi tạo webhook
+    updater.bot.set_webhook(f"{WEBHOOK_URL}/{BOT_TOKEN}")
+    print(f"Webhook set to {WEBHOOK_URL}/{BOT_TOKEN}")
+
+    # Chạy Flask
+    app.run(host="0.0.0.0", port=8080)
 
 if __name__ == "__main__":
     main()
+
 
 import threading
 from flask import Flask
