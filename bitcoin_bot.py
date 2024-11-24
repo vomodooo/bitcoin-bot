@@ -4,6 +4,7 @@ from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, Callback
 from flask import Flask
 from threading import Thread
 from datetime import time
+import logging
 
 # Bot API token và Chat ID của bạn
 BOT_API = "8058083423:AAEdB8bsCgLw1JeSeklG-4sqSmxO45bKRsM"
@@ -48,6 +49,7 @@ def auto_update(context: CallbackContext):
 
 # Hàm khởi chạy bot Telegram
 def run_bot():
+    logging.info("Bắt đầu khởi chạy bot Telegram...")
     updater = Updater(BOT_API)
     dp = updater.dispatcher
 
@@ -59,13 +61,22 @@ def run_bot():
     for hour in range(8, 25):  # 8:00 đến 24:00
         job_queue.run_daily(auto_update, time(hour, 0, 0))
 
+    logging.info("Bắt đầu polling...")
     updater.start_polling()
+    updater.idle()
 
-# Khởi chạy bot trong luồng riêng
-def start_bot_thread():
+# Chạy bot Telegram và Flask server đồng thời
+if __name__ == "__main__":
+    # Cấu hình logging
+    logging.basicConfig(
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=logging.INFO
+    )
+
+    # Chạy bot trong luồng riêng
     bot_thread = Thread(target=run_bot)
     bot_thread.start()
 
-if __name__ == "__main__":
-    start_bot_thread()
+    # Chạy Flask server
+    logging.info("Chạy Flask server...")
     app.run(host="0.0.0.0", port=5000)
