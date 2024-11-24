@@ -8,17 +8,19 @@ from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, Callback
 BOT_TOKEN = "8058083423:AAEdB8bsCgLw1JeSeklG-4sqSmxO45bKRsM"
 WEBHOOK_URL = "https://bitcoin-bot.onrender.com"  # Thay bằng tên app Render
 
-# Hàm lấy giá BTC từ Binance
+# Hàm lấy giá BTC từ CoinGecko
 def get_btc_price():
-    url = "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT"
+    url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
     try:
+        print("Đang gửi yêu cầu tới CoinGecko API...")
         response = requests.get(url, timeout=10)
         response.raise_for_status()
         data = response.json()
-        price = int(float(data['price']))  # Chuyển sang số nguyên
+        print(f"Dữ liệu trả về từ CoinGecko: {data}")  # Ghi log dữ liệu trả về
+        price = int(data['bitcoin']['usd'])  # Lấy giá Bitcoin
         return f"{price:,}".replace(",", ".")  # Định dạng giá trị
     except requests.exceptions.RequestException as e:
-        print(f"Lỗi khi kết nối Binance API: {e}")
+        print(f"Lỗi khi kết nối CoinGecko API: {e}")
         return "Không thể lấy giá BTC."
 
 # Lệnh /gia_btc
