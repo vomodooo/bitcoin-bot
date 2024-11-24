@@ -10,7 +10,7 @@ from flask import Flask, request
 
 # Thông tin Bot
 BOT_TOKEN = '8058083423:AAEdB8bsCgLw1JeSeklG-4sqSmxO45bKRsM'
-WEBHOOK_URL = "https://<your-app-name>.onrender.com"
+WEBHOOK_URL = "https://bitcoin-bot.onrender.com"
 CHAT_ID = '5166662146'
 
 # Flask app và bot setup
