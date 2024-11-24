@@ -1,19 +1,19 @@
 import requests
-import time
 import threading
+import time
 from io import BytesIO
 from datetime import datetime
 import matplotlib.pyplot as plt
-from telegram import Update, Bot
+from telegram import Bot, Update
 from telegram.ext import Updater, CommandHandler, CallbackContext
 
-# Thông tin API và token
+# Bot Token
 BOT_TOKEN = '8058083423:AAEdB8bsCgLw1JeSeklG-4sqSmxO45bKRsM'
 CHAT_ID = '5166662146'
 
-# Cơ sở dữ liệu tạm (dictionary) để lưu lịch báo giá
-user_schedules = {}
-btc_prices = []  # Lưu dữ liệu giá BTC để vẽ biểu đồ
+# Lưu dữ liệu giá BTC
+btc_prices = []
+user_schedules = {}  # Lưu lịch báo giá
 
 # Tạo session với retries để đảm bảo lấy giá coin ổn định
 def create_session_with_retries():
@@ -34,84 +34,100 @@ def get_coin_price(coin_id="bitcoin"):
         price = int(data[coin_id]['usd'])
         return f"{price:,}".replace(",", ".")
     except Exception as e:
-        print(f"Lỗi khi lấy giá {coin_id}: {e}")
-        return "Không thể lấy giá."
+        return None
 
-# Tính năng tự động gửi thông báo giá BTC hàng giờ
+# Gửi thông báo giá BTC mỗi giờ
 def hourly_btc_notification(bot: Bot):
     while True:
         price = get_coin_price("bitcoin")
-        message = f"Giá Bitcoin hiện tại: {price} USD"
-        bot.send_message(chat_id=CHAT_ID, text=message)
-        print(message)  # Log để kiểm tra
-        time.sleep(3600)  # Chờ 1 giờ trước khi gửi thông báo tiếp
+        if price:
+            message = f"Giá Bitcoin hiện tại: {price} USD"
+            bot.send_message(chat_id=CHAT_ID, text=message)
+            print(message)
+            btc_prices.append(int(price.replace('.', '')))
+        time.sleep(3600)
 
 # Vẽ biểu đồ giá BTC
 def generate_btc_chart():
     if len(btc_prices) < 2:
-        return "Không đủ dữ liệu để vẽ biểu đồ."
-    plt.figure(figsize=(16, 9))  # FullHD resolution
+        return None
+    plt.figure(figsize=(16, 9))
     plt.plot(btc_prices, marker="o", color="blue")
     plt.title("Biểu đồ giá Bitcoin")
     plt.xlabel("Thời gian (giờ)")
     plt.ylabel("Giá (USD)")
     plt.grid()
     buf = BytesIO()
-    plt.savefig(buf, format="png", dpi=300)  # Độ phân giải FullHD
+    plt.savefig(buf, format="png", dpi=300)
     buf.seek(0)
     plt.close()
     return buf
 
-# Đặt lịch thông báo giá BTC
+# Lệnh vẽ biểu đồ
+def btc_chart(update: Update, context: CallbackContext):
+    chart = generate_btc_chart()
+    if chart:
+        update.message.reply_photo(photo=chart, caption="Biểu đồ giá Bitcoin")
+    else:
+        update.message.reply_text("Không đủ dữ liệu để vẽ biểu đồ.")
+
+# Đặt lịch báo giá BTC
 def dat_lich_btc(update: Update, context: CallbackContext):
-    chat_id = update.message.chat_id
     args = context.args
     if len(args) < 2:
-        update.message.reply_text("Vui lòng nhập thời gian báo giá (VD: 12 30 để báo lúc 12:30 mỗi ngày).")
+        update.message.reply_text("Vui lòng nhập giờ và phút để đặt lịch (VD: /datlich_btc 12 30).")
         return
-    hour, minute = map(int, args)
-    user_schedules[chat_id] = {"hour": hour, "minute": minute}
+    hour, minute = map(int, args[:2])
+    user_schedules[update.message.chat_id] = {"hour": hour, "minute": minute}
     update.message.reply_text(f"Đã đặt lịch báo giá BTC lúc {hour}:{minute:02d} mỗi ngày.")
 
-# Xử lý việc gửi thông báo theo lịch
+# Gửi thông báo theo lịch
 def schedule_notifications(bot: Bot):
     while True:
         now = datetime.now()
         for chat_id, schedule in user_schedules.items():
             if now.hour == schedule["hour"] and now.minute == schedule["minute"]:
                 price = get_coin_price("bitcoin")
-                bot.send_message(chat_id=chat_id, text=f"Giá Bitcoin hiện tại: {price} USD")
-        time.sleep(60)  # Kiểm tra mỗi phút
+                if price:
+                    bot.send_message(chat_id=chat_id, text=f"Giá Bitcoin hiện tại: {price} USD")
+        time.sleep(60)
 
-# Lệnh theo dõi giá đồng coin khác
+# Tra cứu giá coin khác
 def coin_khac(update: Update, context: CallbackContext):
     args = context.args
-    if len(args) == 0:
-        update.message.reply_text("Vui lòng nhập ký hiệu coin bạn muốn theo dõi (VD: /coin_khac eth).")
+    if not args:
+        update.message.reply_text("Vui lòng nhập ký hiệu coin cần tra cứu (VD: /coin_khac eth).")
         return
     coin_id = args[0].lower()
     price = get_coin_price(coin_id)
-    update.message.reply_text(f"Giá {coin_id.upper()} hiện tại: {price} USD")
+    if price:
+        update.message.reply_text(f"Giá {coin_id.upper()} hiện tại: {price} USD")
+    else:
+        update.message.reply_text(f"Không thể lấy giá của {coin_id.upper()}.")
 
-# Khởi động bot
+# Xử lý lỗi ngoại lệ
+def error_handler(update: Update, context: CallbackContext):
+    print(f"Lỗi xảy ra: {context.error}")
+
+# Khởi chạy bot
 def main():
     updater = Updater(BOT_TOKEN, use_context=True)
     dispatcher = updater.dispatcher
     bot = updater.bot
 
-    # Thêm handler cho các lệnh
+    # Thêm lệnh
+    dispatcher.add_handler(CommandHandler("btc_chart", btc_chart))
     dispatcher.add_handler(CommandHandler("datlich_btc", dat_lich_btc, pass_args=True))
     dispatcher.add_handler(CommandHandler("coin_khac", coin_khac, pass_args=True))
 
-    # Chạy luồng để theo dõi giá hàng giờ
-    hourly_thread = threading.Thread(target=hourly_btc_notification, args=(bot,), daemon=True)
-    hourly_thread.start()
+    # Đăng ký xử lý lỗi
+    dispatcher.add_error_handler(error_handler)
 
-    # Chạy luồng để theo dõi lịch thông báo
-    schedule_thread = threading.Thread(target=schedule_notifications, args=(bot,), daemon=True)
-    schedule_thread.start()
+    # Chạy luồng thông báo giá hàng giờ
+    threading.Thread(target=hourly_btc_notification, args=(bot,), daemon=True).start()
+    threading.Thread(target=schedule_notifications, args=(bot,), daemon=True).start()
 
-    # Bắt đầu bot
+    # Khởi chạy polling
     updater.start_polling()
     updater.idle()
 
