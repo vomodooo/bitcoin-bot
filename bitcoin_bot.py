@@ -2,7 +2,7 @@ import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, CallbackContext
 from flask import Flask
-import threading
+from threading import Thread
 from datetime import time
 
 # Bot API token và Chat ID của bạn
@@ -60,10 +60,12 @@ def run_bot():
         job_queue.run_daily(auto_update, time(hour, 0, 0))
 
     updater.start_polling()
-    updater.idle()
+
+# Khởi chạy bot trong luồng riêng
+def start_bot_thread():
+    bot_thread = Thread(target=run_bot)
+    bot_thread.start()
 
 if __name__ == "__main__":
-    # Chạy bot Telegram trong luồng riêng
-    threading.Thread(target=run_bot).start()
-    # Chạy Flask server
+    start_bot_thread()
     app.run(host="0.0.0.0", port=5000)
