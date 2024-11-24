@@ -2,7 +2,18 @@ import telebot
 import requests
 import schedule
 import time
+from flask import Flask
+import os
 
+app = Flask(__name__)
+
+# Các route và xử lý khác
+
+port = int(os.environ.get('PORT', 5000))
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=port)
+    
 # Thông tin API và chat ID
 BOT_TOKEN = '8058083423:AAEdB8bsCgLw1JeSeklG-4sqSmxO45bKRsM'
 CHAT_ID = 5166662146
