@@ -102,6 +102,14 @@ def start(update: Update, context: CallbackContext):
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.message.reply_text("Chọn một tính năng:", reply_markup=reply_markup)
 
+# Lệnh giá BTC
+def gia_btc(update: Update, context: CallbackContext):
+    price = get_coin_price("bitcoin")
+    if price:
+        update.message.reply_text(f"Giá Bitcoin hiện tại: {price} USD")
+    else:
+        update.message.reply_text("Không thể lấy giá Bitcoin.")
+
 # Đặt lịch báo giá BTC
 def dat_lich_btc(update: Update, context: CallbackContext):
     args = context.args
@@ -149,6 +157,7 @@ def index():
 if __name__ == "__main__":
     # Đăng ký lệnh
     dispatcher.add_handler(CommandHandler("start", start))
+    dispatcher.add_handler(CommandHandler("gia_btc", gia_btc))
     dispatcher.add_handler(CommandHandler("datlich_btc", dat_lich_btc, pass_args=True))
     dispatcher.add_handler(CommandHandler("coin_khac", coin_khac, pass_args=True))
     dispatcher.add_handler(CallbackQueryHandler(button_handler))
