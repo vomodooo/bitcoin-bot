@@ -5,7 +5,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import schedule
 import time
-import locale
 from flask import Flask
 
 # Thông tin bot và chat
@@ -22,8 +21,7 @@ def get_current_price(message):
     price = get_bitcoin_price()
     
     # Định dạng giá với dấu chấm ngăn cách phần nghìn và đơn vị USD
-    locale.setlocale(locale.LC_ALL, 'en_US')
-    formatted_price = locale.format_string("%#.2f", price, grouping=True)
+    formatted_price = f"{price:,.2f}"
 
     bot.reply_to(message, f"Giá Bitcoin hiện tại: {formatted_price} USD")
     
