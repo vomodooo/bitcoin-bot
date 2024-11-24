@@ -5,6 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import schedule
 import time
+import locale
 from flask import Flask
 
 # Thông tin bot và chat
@@ -15,6 +16,17 @@ BINANCE_API_URL = 'https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT'
 # Khởi tạo bot
 bot = telebot.TeleBot(BOT_TOKEN)
 
+# Hàm xử lý lệnh /gia_btc
+@bot.message_handler(commands=['gia_btc'])
+def get_current_price(message):
+    price = get_bitcoin_price()
+    
+    # Định dạng giá với dấu chấm ngăn cách phần nghìn và đơn vị USD
+    locale.setlocale(locale.LC_ALL, 'en_US')
+    formatted_price = locale.format_string("%#.2f", price, grouping=True)
+
+    bot.reply_to(message, f"Giá Bitcoin hiện tại: {formatted_price} USD")
+    
 # Hàm lấy giá Bitcoin
 def get_bitcoin_price():
     response = requests.get(BINANCE_API_URL)
