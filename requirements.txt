@@ -2,3 +2,5 @@ telebot
 requests
 schedule
 gunicorn
+flask
+os
