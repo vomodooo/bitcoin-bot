@@ -1,12 +1,20 @@
 import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, CallbackContext
-from datetime import datetime, time
-import time as t
+from flask import Flask
+import threading
+from datetime import time
 
 # Bot API token và Chat ID của bạn
 BOT_API = "8058083423:AAEdB8bsCgLw1JeSeklG-4sqSmxO45bKRsM"
 CHAT_ID = "5166662146"
+
+# Flask web server (Render yêu cầu)
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    return "Bot Telegram đang chạy."
 
 # Hàm lấy giá Bitcoin từ API
 def get_bitcoin_price():
@@ -38,8 +46,8 @@ def auto_update(context: CallbackContext):
     price_info = get_bitcoin_price()
     context.bot.send_message(chat_id=CHAT_ID, text=price_info)
 
-# Cấu hình bot
-def main():
+# Hàm khởi chạy bot Telegram
+def run_bot():
     updater = Updater(BOT_API)
     dp = updater.dispatcher
 
@@ -54,35 +62,8 @@ def main():
     updater.start_polling()
     updater.idle()
 
-if __name__ == '__main__':
-    main()
-from flask import Flask
-import threading
-
-# Flask web server (Render yêu cầu)
-app = Flask(__name__)
-
-@app.route('/')
-def index():
-    return "Bot Telegram đang chạy."
-
-# Hàm khởi chạy bot Telegram
-def run_bot():
-    from telegram.ext import Updater, CommandHandler, CallbackQueryHandler
-    updater = Updater("BOT_API")
-    dp = updater.dispatcher
-
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CallbackQueryHandler(button))
-
-    # Cấu hình tự động gửi thông báo từ 8:00 đến 24:00
-    job_queue = updater.job_queue
-    for hour in range(8, 25):  # 8:00 đến 24:00
-        job_queue.run_daily(auto_update, time(hour, 0, 0))
-
-    updater.start_polling()
-    updater.idle()
-
 if __name__ == "__main__":
-    threading.Thread(target=run_bot).start()  # Chạy bot trong luồng riêng
-    app.run(host="0.0.0.0", port=5000)       # Chạy Flask
+    # Chạy bot Telegram trong luồng riêng
+    threading.Thread(target=run_bot).start()
+    # Chạy Flask server
+    app.run(host="0.0.0.0", port=5000)
