@@ -1,1 +1,5 @@
-pip install telebot requests pandas matplotlib schedule
+telebot
+requests
+pandas
+matplotlib
+schedule
