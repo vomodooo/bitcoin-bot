@@ -1,6 +1,6 @@
-telebot
+python-telegram-bot
 requests
 pandas
 matplotlib
 schedule
-Flask
+gunicorn
