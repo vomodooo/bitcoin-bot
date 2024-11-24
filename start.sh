@@ -1,2 +1,2 @@
 #!/bin/bash
-python bitcoin_bot.py
+gunicorn -w 1 -b 0.0.0.0:5000 bitcoin_bot:app
