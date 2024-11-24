@@ -9,7 +9,7 @@ def get_bitcoin_price():
     try:
         url = 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd'
         response = requests.get(url)
-        data = response.json()   
+        data = response.json()
 
         # Check if 'bitcoin' key exists before accessing it
         if 'bitcoin' in data:
