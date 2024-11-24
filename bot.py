@@ -1,7 +1,7 @@
 import os
 import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, CallbackContext
+from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, CallbackContext
 
 # Thông tin API Telegram
 BOT_TOKEN = "8058083423:AAEdB8bsCgLw1JeSeklG-4sqSmxO45bKRsM"
@@ -44,7 +44,7 @@ def main():
     # Đăng ký các lệnh
     dispatcher.add_handler(CommandHandler("start", start))
     dispatcher.add_handler(CommandHandler("gia_btc", gia_btc))
-    dispatcher.add_handler(telegram.ext.CallbackQueryHandler(button_handler))
+    dispatcher.add_handler(CallbackQueryHandler(button_handler))
 
     # Chạy bot
     updater.start_polling()
