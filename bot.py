@@ -5,17 +5,23 @@ from io import BytesIO
 from datetime import datetime
 import matplotlib.pyplot as plt
 from telegram import Bot, Update
-from telegram.ext import Updater, CommandHandler, CallbackContext
+from telegram.ext import Updater, CommandHandler, CallbackContext, Dispatcher
+from flask import Flask, request
 
 # Bot Token
 BOT_TOKEN = '8058083423:AAEdB8bsCgLw1JeSeklG-4sqSmxO45bKRsM'
+WEBHOOK_URL = "https://bitcoin-bot.onrender.com"
 CHAT_ID = '5166662146'
 
-# Lưu dữ liệu giá BTC
-btc_prices = []
-user_schedules = {}  # Lưu lịch báo giá
+# Flask App
+app = Flask(__name__)
+bot = Bot(BOT_TOKEN)
+dispatcher = Dispatcher(bot, None, workers=4)
 
-# Tạo session với retries để đảm bảo lấy giá coin ổn định
+btc_prices = []
+user_schedules = {}
+
+# Tạo session ổn định
 def create_session_with_retries():
     session = requests.Session()
     retries = requests.adapters.Retry(total=5, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
@@ -24,7 +30,7 @@ def create_session_with_retries():
 
 session = create_session_with_retries()
 
-# Lấy giá coin từ API CoinGecko
+# Lấy giá BTC từ API CoinGecko
 def get_coin_price(coin_id="bitcoin"):
     url = f"https://api.coingecko.com/api/v3/simple/price?ids={coin_id}&vs_currencies=usd"
     try:
@@ -33,17 +39,16 @@ def get_coin_price(coin_id="bitcoin"):
         data = response.json()
         price = int(data[coin_id]['usd'])
         return f"{price:,}".replace(",", ".")
-    except Exception as e:
+    except Exception:
         return None
 
 # Gửi thông báo giá BTC mỗi giờ
-def hourly_btc_notification(bot: Bot):
+def hourly_btc_notification():
     while True:
         price = get_coin_price("bitcoin")
         if price:
             message = f"Giá Bitcoin hiện tại: {price} USD"
             bot.send_message(chat_id=CHAT_ID, text=message)
-            print(message)
             btc_prices.append(int(price.replace('.', '')))
         time.sleep(3600)
 
@@ -63,7 +68,6 @@ def generate_btc_chart():
     plt.close()
     return buf
 
-# Lệnh vẽ biểu đồ
 def btc_chart(update: Update, context: CallbackContext):
     chart = generate_btc_chart()
     if chart:
@@ -71,7 +75,6 @@ def btc_chart(update: Update, context: CallbackContext):
     else:
         update.message.reply_text("Không đủ dữ liệu để vẽ biểu đồ.")
 
-# Đặt lịch báo giá BTC
 def dat_lich_btc(update: Update, context: CallbackContext):
     args = context.args
     if len(args) < 2:
@@ -81,8 +84,7 @@ def dat_lich_btc(update: Update, context: CallbackContext):
     user_schedules[update.message.chat_id] = {"hour": hour, "minute": minute}
     update.message.reply_text(f"Đã đặt lịch báo giá BTC lúc {hour}:{minute:02d} mỗi ngày.")
 
-# Gửi thông báo theo lịch
-def schedule_notifications(bot: Bot):
+def schedule_notifications():
     while True:
         now = datetime.now()
         for chat_id, schedule in user_schedules.items():
@@ -92,7 +94,6 @@ def schedule_notifications(bot: Bot):
                     bot.send_message(chat_id=chat_id, text=f"Giá Bitcoin hiện tại: {price} USD")
         time.sleep(60)
 
-# Tra cứu giá coin khác
 def coin_khac(update: Update, context: CallbackContext):
     args = context.args
     if not args:
@@ -105,31 +106,37 @@ def coin_khac(update: Update, context: CallbackContext):
     else:
         update.message.reply_text(f"Không thể lấy giá của {coin_id.upper()}.")
 
-# Xử lý lỗi ngoại lệ
-def error_handler(update: Update, context: CallbackContext):
-    print(f"Lỗi xảy ra: {context.error}")
+def start(update: Update, context: CallbackContext):
+    update.message.reply_text("Bot đã sẵn sàng! Hãy sử dụng các lệnh như /btc_chart, /datlich_btc, /coin_khac.")
 
-# Khởi chạy bot
-def main():
-    updater = Updater(BOT_TOKEN, use_context=True)
-    dispatcher = updater.dispatcher
-    bot = updater.bot
+def webhook_handler():
+    json_update = request.get_json(force=True)
+    update = Update.de_json(json_update, bot)
+    dispatcher.process_update(update)
+    return "ok"
 
-    # Thêm lệnh
+# Đăng ký webhook và lệnh
+@app.route(f"/{BOT_TOKEN}", methods=["POST"])
+def webhook():
+    return webhook_handler()
+
+@app.route("/", methods=["GET"])
+def index():
+    return "Bot is running!"
+
+if __name__ == "__main__":
+    # Đăng ký lệnh
     dispatcher.add_handler(CommandHandler("btc_chart", btc_chart))
     dispatcher.add_handler(CommandHandler("datlich_btc", dat_lich_btc, pass_args=True))
     dispatcher.add_handler(CommandHandler("coin_khac", coin_khac, pass_args=True))
+    dispatcher.add_handler(CommandHandler("start", start))
 
-    # Đăng ký xử lý lỗi
-    dispatcher.add_error_handler(error_handler)
+    # Đặt webhook
+    bot.set_webhook(url=f"{WEBHOOK_URL}/{BOT_TOKEN}")
 
-    # Chạy luồng thông báo giá hàng giờ
-    threading.Thread(target=hourly_btc_notification, args=(bot,), daemon=True).start()
-    threading.Thread(target=schedule_notifications, args=(bot,), daemon=True).start()
+    # Chạy các tác vụ nền
+    threading.Thread(target=hourly_btc_notification, daemon=True).start()
+    threading.Thread(target=schedule_notifications, daemon=True).start()
 
-    # Khởi chạy polling
-    updater.start_polling()
-    updater.idle()
-
-if __name__ == "__main__":
-    main()
+    # Chạy Flask server
+    app.run(host="0.0.0.0", port=5000)
