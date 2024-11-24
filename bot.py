@@ -1,13 +1,10 @@
 import telebot
 import requests
-import pandas as pd
-import matplotlib.pyplot as plt
 import schedule
 import time
-from io import BytesIO
 
 # Thông tin API và chat ID
-BOT_TOKEN = '8058083423:AAEdB8bsCgLw1JeSeklG-44sqSmxO45bKRsM'
+BOT_TOKEN = '8058083423:AAEdB8bsCgLw1JeSeklG-4sqSmxO45bKRsM'
 CHAT_ID = 5166662146
 bot = telebot.TeleBot(BOT_TOKEN)
 
@@ -26,35 +23,21 @@ def get_bitcoin_price():
 
     # Quy đổi và định dạng giá
     price_btc_usd = price_btc_usdt * usd_to_usdt
-    formatted_price = f"{price_btc_usd:,.2f}"  # Định dạng với dấu phẩy ngăn cách hàng nghìn
+    formatted_price = f"${price_btc_usd:,.2f}"  # Thêm dấu $ và định dạng số
     return formatted_price
 
 def send_price_update():
     price = get_bitcoin_price()
-    bot.send_message(CHAT_ID, f"Giá Bitcoin hiện tại: {price} USD")
-
-def plot_price_chart(days=1):
-    # Lấy dữ liệu lịch sử giá Bitcoin
-    # ...
-    # Vẽ biểu đồ
-    # ...
-    buf = BytesIO()
-    plt.savefig(buf, format='png')
-    buf.seek(0)
-    bot.send_photo(CHAT_ID, photo=buf)
+    bot.send_message(CHAT_ID, f"Giá Bitcoin hiện tại: {price}")
 
 # Lịch gửi thông báo
-schedule.every().hour.do(send_price_update)
+schedule.every(1).hour.do(send_price_update)
 
 # Xử lý lệnh /gia_btc
 @bot.message_handler(commands=['gia_btc'])
 def get_current_price(message):
     price = get_bitcoin_price()
-    bot.reply_to(message, f"Giá Bitcoin hiện tại: {price:.2f} USDT")
-
-@bot.message_handler(commands=['chart'])
-def send_chart(message):
-    plot_price_chart()
+    bot.reply_to(message, f"Giá Bitcoin hiện tại: {price}")
 
 # Chạy vòng lặp để xử lý các lệnh
 while True:
