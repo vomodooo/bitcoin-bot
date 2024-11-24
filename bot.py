@@ -10,12 +10,14 @@ CHAT_ID = "5166662146"
 # Hàm lấy giá BTC từ Binance
 def get_btc_price():
     url = "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT"
-    response = requests.get(url)
-    if response.status_code == 200:
+    try:
+        response = requests.get(url, timeout=10)  # Thêm timeout để tránh treo
+        response.raise_for_status()  # Gây lỗi nếu trạng thái HTTP không phải 200
         data = response.json()
         price = float(data['price'])
-        return f"{price:,.2f}".replace(",", ".")  # Định dạng với dấu . giữa các phần thập phân
-    else:
+        return f"{price:,.2f}".replace(",", ".")  # Định dạng giá
+    except requests.exceptions.RequestException as e:
+        print(f"Lỗi khi kết nối Binance API: {e}")
         return "Không thể lấy giá BTC."
 
 # Lệnh /gia_btc
