@@ -6,10 +6,22 @@ bot = telebot.TeleBot('8058083423:AAEdB8bsCgLw1JeSeklG-4sqSmxO45bKRsM')
 chat_id = '5166662146'
 
 def get_bitcoin_price():
-    url = 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd'
-    response = requests.get(url)
-    data = response.json()
-    return data['bitcoin']['usd']
+    try:
+        url = 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd'
+        response = requests.get(url)
+        data = response.json()   
+
+        # Check if 'bitcoin' key exists before accessing it
+        if 'bitcoin' in data:
+            return data['bitcoin']['usd']
+        else:
+            # Handle the case where 'bitcoin' key is missing
+            print("API response structure might have changed. Data doesn't contain 'bitcoin' key.")
+            return None
+    except requests.exceptions.RequestException as e:
+        # Handle network errors
+        print(f"Error getting Bitcoin price: {e}")
+        return None
 
 @bot.message_handler(commands=['gia_bitcoin'])
 def send_current_price(message):
